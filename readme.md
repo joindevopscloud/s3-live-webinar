@@ -6,11 +6,25 @@ AWS gives us 3 main storage services:
 2. **EFS** - Elastic File System
 3. **S3** - Simple Storage Service
 
-**EBS** gives us a raw disk, like a plain HDD/SSD. Before we can use it, we have to format it and create a file system on it. We can pick whichever file system suits our OS, and then we mount it to the instance. So EBS is really 2 steps: create the file system (format), then mount. EBS can be attached to only one instance at a time, within its AZ. An external HDD/SSD is the perfect example.
+**EBS** — gives us a raw disk, like a plain HDD/SSD:
+- We have to format it and create a file system on it before we can use it.
+- We can pick whichever file system suits our OS, then mount it to the instance.
+- So EBS is 2 steps: create the file system (format), then mount.
+- Can be attached to only one instance at a time, within its AZ.
+- An external HDD/SSD is the perfect example.
 
-**EFS** is a managed NFS (Network File System). Here the file system is already decided by AWS — it is always NFS. We don't format anything, we just mount it. So EFS is a single step: mount. EFS can be attached to multiple systems at a time. Microsoft One Drive is the perfect example.
+**EFS** — a managed NFS (Network File System):
+- The file system is already decided by AWS — it is always NFS.
+- We don't format anything, we just mount it.
+- So EFS is a single step: mount.
+- Can be attached to multiple systems at a time.
+- Microsoft One Drive is the perfect example.
 
-**S3** is completely different. We don't worry about file systems or mounting at all. That is why it is called object storage. We simply create, read, update and delete files through an HTTP/HTTPS API. It is like storing a bag in a cloak room — we don't really care where they keep it. We get a token when we hand over the bag, and we get the bag back when we hand over the token.
+**S3** — completely different, this is object storage:
+- We don't worry about file systems or mounting at all.
+- We simply create, read, update and delete files through an HTTP/HTTPS API.
+- It is like storing a bag in a cloak room — we don't really care where they keep it.
+- We get a token when we hand over the bag, and we get the bag back when we hand over the token.
 
 ## Quick comparison
 
