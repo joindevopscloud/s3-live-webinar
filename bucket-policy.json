@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Statement1",
+      "Effect": "Deny",
+      "Principal": {
+        "AWS": "arn:aws:iam::160885265516:user/suresh"
+      },
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*"
+    }
+  ]
+}
