@@ -1,0 +1,154 @@
+What is block?
+	for users it looks like files and folders, but underlying storage it is called as blocks. 4kb per block. each block is 4kb size.
+	
+	files are folders are stored as blocks in storage.
+	
+	format and create file system + mount the disk
+	EBS should be near to instance means in same AZ.
+	size is fixed, 20GB or 40GB, you can increase disk but cause downtime
+	EBS is fast, it is suitable for OS and DB
+
+EFS -> file system is NFS. Network file sharing
+		mount the disk to instance
+	   EFS can be anywhere in network
+	   Microsoft onedrive. we can attach to any number of instances
+	   it grows as the storage grows, no need to fix the storage
+	   documents like images, videos, pdfs can be stored here
+
+similar: we should mount to instance, there is some FS
+
+S3 -> object storage, we dont care about filesystem and mounting. data is key value pairs
+	key -> object name
+	value -> object itself
+	files and folders are illusion here
+	joindevops -> dev/terraform.tfstate
+	joindevops/dev/terraform.tfstate -> real state file
+	
+durability -> 11 9's
+10 lk objects storage, 10,000 years there is a chance of loosing one object
+availability -> 99.99% az downtimes, region outages
+
+data is stored in region, not multi region
+
+Storage classes
+===============
+AWS charge us for
+1. storing the data
+2. retrieve the data
+
+Deciding point is how frequently you access data?
+
+from top to down, retrievals become slower and storage become cheaper
+
+Standard -> retrievals are free, but cost for storage
+Standard-IA -> not frequent access, once in a month.. storage becomes cheaper than standard. retrievals become costly than standard
+One zone standard-IA -> 1AZ. danger. build files, cache files, etc.. if you are able to regenerate
+Glacier Instant -> storage becomes cheaper, retrievals becomes instant but costly -> seconds
+Glacier Flexible Retrieval -> storage becomes more cheaper, retrievals becomes more slow but more costly -> minutes
+Glacier Deep archieve -> storage becomes cheapest, but retrievals are costlier and slow usually in hours
+
+app logs
+========
+running logs -> standard. if any problem we need immidiate retrievals and frequent retrievals
+1 month old logs -> standard-IA. because storage is chaper, we dont access frequently..
+3 month old logs -> Glacier instant. not frquent access, more cheaper
+6 months old logs -> glacier flexible Retrieval -> retrievals are in minutes
+1 year old logs -> Glacier Deep archieve -> storage is more and more cheaper, but retrievals are more costly..
+
+Glacier -> Retrieval + Restore
+
+Intelligent-Tiering -> AWS monitors our objects and their access frquency. then AWS decides which tier is suitable. AWS charges for monitoring objects..
+
+if you are not accessing frequently -> glacier
+if you are accessing frequently -> standard
+
+s3 bucket name should be universally unique with in all AWS accounts..
+if you select regional namespace, aws appends our accid-region-an
+joindevops-160885265516-us-east-1-an -> universally unique
+
+restore + retrieval
+
+aws s3 cp \
+  s3://joindevops-160885265516-us-east-1-an/s3-webinar.txt \
+  s3://joindevops-160885265516-us-east-1-an/s3-webinar.txt \
+  --storage-class STANDARD \
+  --force-glacier-transfer
+  
+aws s3api head-object --bucket joindevops-160885265516-us-east-1-an --key s3-webinar.txt
+
+write shell script, check every 5min if ongoing request is false, download the object
+
+versions
+========
+if present config or state file corrupted, we can get previous versions
+
+Delete Marker
+=============
+if we delete object in S3, AWS dont delete it really, it will just place delete marker on the object. in UI it looks like deleted, but actually it is not deleted.
+
+It is safety feature for accidental deletes.
+
+If you really want to delete the file? delete versions.. irreversable
+
+100 devops engineers + 10 apply -> 1000 versions
+300 days -> 3,00,000 versions -> 3,00,000 files
+
+Lifecycle rules
+==============
+we can configure how many versions are required, very old versions can be automatically deleted by AWS
+
+1 day -> 1000 versions
+AWS will not delete immidiate. should be 1 day old. 
+
+expire non current versions after certain days and certain number of old versions
+
+30 days old -> standard-IA -> 60 days -> move to glacier instant -> 90 days -> glacier flexible retrieval -> 120 days -> glacier deep
+
+AWS S3 stores data regionally, for DR keep the replication cross region replication
+
+Cross Region Replication
+=============
+1. Create bucket in another region
+2. Versioning should be on in both source and destination buckets
+
+Upcoming files only will be replicated, not existing files. 
+
+replicas will not be done immidiately.
+
+Same region Replication
+==============
+if one account is compromised, attacker accessed S3 bucket and deleted... SRR bucket can save us..
+
+Security
+========
+By default block public access in One
+
+1. IAM Policy
+2. Bucket Policy
+
+Deny in either IAM policy or bucket policy -> Deny
+Allow in either one, but no deny at all -> Allow
+
+
+aws s3api put-bucket-policy --bucket joindevops-160885265516-us-east-1-an --policy file://bucket-policy.json
+
+pre-signed urls we can generate objects with time validity, no need of IAM user or bucket policy..
+
+MFA delete
+
+How can you keep terraform state secure?
+========================================
+1. Versioning
+2. MFA Delete -> no one should have delete state file access
+3. Block public access -> On
+4. IAM Policy
+		PutObject
+		GetObject
+		GetObjectVersion
+		PutObjectVersion -> only terraform instance. EC2 Terraform workstation role
+5. DevOps Team
+		GetObject
+		GetObjectVersion
+6. MFA delete is only root account -> Only bucket-policy access
+7. same region replication -> diff AWS account
+8. Encryption at rest, transfer only HTTPS
