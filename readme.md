@@ -10,7 +10,10 @@ AWS gives us 3 main storage services:
 - We have to format it and create a file system on it before we can use it.
 - We can pick whichever file system suits our OS, then mount it to the instance.
 - So EBS is 2 steps: create the file system (format), then mount.
-- Can be attached to only one instance at a time, within its AZ.
+- Under the hood it is **block storage** — what looks like files and folders to us is stored as fixed-size **blocks** (~4 KB each) on the disk.
+- Can be attached to only one instance at a time, and must be in the **same AZ** as the instance.
+- **Fixed, provisioned size** — you can grow the volume later, but it can cause **downtime**.
+- **Fast**, so it is the right choice for the **OS root disk and databases**.
 - An external HDD/SSD is the perfect example.
 
 **EFS** — a managed NFS (Network File System):
@@ -34,7 +37,8 @@ AWS gives us 3 main storage services:
 | **Type** | Block storage | File storage | Object storage |
 | **File system** | You create it (format + choose type) | Already NFS (AWS decides) | None — there is no file system |
 | **Steps to use** | Format + mount (2 steps) | Mount only (1 step) | Nothing to mount — just API calls |
-| **Size / capacity** | Provisioned — you pick a fixed size upfront | Grows and shrinks automatically | Effectively unlimited, no provisioning |
+| **Size / capacity** | Provisioned — fixed size upfront; resizing can need downtime | Grows and shrinks automatically | Effectively unlimited, no provisioning |
+| **Speed / best for** | Fast — OS root disk, databases | Shared docs (images, videos, PDFs) | Objects — backups, logs, artifacts, static sites |
 | **Who can attach** | One instance at a time, within its AZ | Many instances at once | Anyone with permission, over HTTP/HTTPS |
 | **Real-world example** | External HDD/SSD | Shared network drive (OneDrive) | Cloak room (token in, bag out) |
 
@@ -42,9 +46,10 @@ AWS gives us 3 main storage services:
 
 * Not a filesystem — there are no real folders. Even when we see something that looks like a folder, AWS treats the whole path as a single key. It is like dumping all the objects into one big bucket, with no folders inside.
 * No provisioning — you never declare a size; it just grows, and you pay only for what you store.
-* Eleven 9s durability (99.999999999%) — every object auto-replicated across ≥3 Availability Zones.
+* Eleven 9s durability (99.999999999%) — every object auto-replicated across ≥3 Availability Zones. To put it in scale: store 10 million objects and you'd expect to lose one about once every 10,000 years.
+* Durability != availability — durability is about *never losing* data (11 9s); availability is about *being able to reach* it right now. S3 Standard targets **99.99% availability**, so AZ hiccups or region outages can make data briefly unreachable even though it is never lost.
 * No 3X charge for that durability — to give us eleven 9s, AWS keeps more than 3 copies across those AZs, but it does not charge us 3 times. If we store 100 GB, we pay for 100 GB, not 300 GB. The extra copies are AWS's cost to bear; we are just buying the durability.
-* Regional data, global namespace — data lives in one region across AZs, but bucket names are globally unique.
+* Regional data, global namespace — data lives in one region across AZs, but bucket names must be **universally unique across every AWS account**. A common trick to guarantee uniqueness is to bake the account ID and region into the name, e.g. `joindevops-160885265516-us-east-1`.
 * Strong read-after-write consistency — since Dec 2020, a successful PUT is immediately readable.
 * The glue of AWS — Terraform state, CloudTrail logs, ALB access logs, backups, data lakes all land in S3.
 
