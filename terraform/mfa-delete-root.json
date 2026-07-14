@@ -1,0 +1,52 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyDeleteTfstateForNonRoot",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::joindvops-state-160885265516-us-east-1-an/*.tfstate",
+            "Condition": {
+                "StringNotLike": {
+                    "aws:PrincipalArn": "arn:aws:iam::160885265516:root"
+                }
+            }
+        },
+        {
+            "Sid": "DenyRootDeleteTfstateWithoutMFA",
+            "Effect": "Deny",
+            "Principal": {
+                "AWS": "arn:aws:iam::160885265516:root"
+            },
+            "Action": [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::joindvops-state-160885265516-us-east-1-an/*.tfstate",
+            "Condition": {
+                "BoolIfExists": {
+                    "aws:MultiFactorAuthPresent": "false"
+                }
+            }
+        },
+        {
+            "Sid": "DenyInsecureTransport",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::joindvops-state-160885265516-us-east-1-an",
+                "arn:aws:s3:::joindvops-state-160885265516-us-east-1-an/*"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "false"
+                }
+            }
+        }
+    ]
+}
