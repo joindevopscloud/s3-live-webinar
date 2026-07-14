@@ -1,0 +1,147 @@
+Encryption
+==========
+1. rest -> inside storage disk -> default enabled
+2. transit -> client to s3 connection, travel time encryption
+
+IAM policy -> access control to the buckets to users, roles and groups
+Bucket policy -> MFA delete, deny, HTTPS only upload, etc..
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnforceHttpsUploadsOnly",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    }
+  ]
+}
+
+aws s3api get-bucket-policy --bucket joindevops-160885265516-us-east-1-an --output text
+
+MFA Delete
+==========
+very very important files, you dont want anyone to delete those files even admin access
+
+Who can enable/disable MFA Delete ? -> only root user
+Only root user have access to delete objects
+MFA enable is not available through UI, it can be only enabled through SDK or CLI
+
+
+arn:aws:iam::160885265516:mfa/s25
+
+aws s3api put-bucket-versioning \
+  --bucket joindevops-160885265516-us-east-1-an \
+  --versioning-configuration Status=Enabled,MFADelete=Enabled \
+  --mfa "arn:aws:iam::160885265516:mfa/s25 681977" \
+  --profile root-account
+  
+aws configure --profile root-account
+
+Mfa Authentication is not supported on a bucket with lifecycle configuration.
+lifecycle rules -> to expire un-necessary objects
+MFA Authentication and lifecycle rules can't work together, you need to choose either one
+
+aws s3api get-bucket-versioning \
+  --bucket joindevops-160885265516-us-east-1-an \
+  --profile root-account
+
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "EnforceMFADelete",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+            "Condition": {
+                "BoolIfExists": {
+                    "aws:MultiFactorAuthPresent": "false"
+                }
+            }
+        },
+		{
+            "Sid": "DenyDeleteExceptRootUser",
+            "Effect": "Deny",
+            "NotPrincipal": {
+                "AWS": "arn:aws:iam::160885265516:root"
+            },
+            "Action": [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*"
+        }
+    ]
+}
+
+
+aws s3api delete-object \
+  --bucket joindevops-160885265516-us-east-1-an \
+  --key "s3-webinar.txt" \
+  --version-id "BTpr1H43ZLzINfKUrjkzCKs4.hsyTetW" \
+  --mfa "arn:aws:iam::160885265516:mfa/s25 956771" \
+  --profile root-account
+  
+aws sts get-session-token \
+  --serial-number arn:aws:iam::160885265516:mfa/s25 \
+  --token-code 151029 \
+  --profile root-account
+  
+/c/Users/<user-name>/.aws/credentials
+
+aws s3api put-bucket-versioning \
+  --bucket joindevops-160885265516-us-east-1-an \
+  --versioning-configuration Status=Enabled,MFADelete=Disabled \
+  --mfa "arn:aws:iam::160885265516:mfa/s25 850834" \
+  --profile root-account
+
+
+static website hosting
+======================
+static website -> no api calls
+
+1. remove block public access
+2. add bucket policy to get objects by everyone
+3. static website hosting enable
+
+1. no HTTPS
+2. can't attach domain
+
+https://daws90s.shop
+
+CloudFront -> S3 Origin
+HTTPS certificate attach to CloudFront
+if API calls are required, we can have another origin on /api/* -> ALB
+
+
+How to keep terraform state secure?
+===================================
+1. We will have one EC2 instance just to terraform, install terraform
+2. That instance will have admin access. IAM Role
+3. IAM devops team group will have only read access to the files
+4. Versionining on
+5. Encryption -> at rest and at transit
+6. Block public access -> on
+7. Delete only root user with MFA -> bucket policy
+8. don't enable MFA delete, because lifecycle rules will not work
+9. if lifecycle rules will not work, thousands of state files and lock files with older versions will exist. so configure lifecycle rules
+
+ami-0220d79f3f480ecf5
+ec2-user
+DevOps321
+
+getObject
+getObjectVersion

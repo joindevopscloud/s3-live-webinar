@@ -14,7 +14,7 @@
                 "s3:ListBucket",
                 "s3:ListBucketVersions"
             ],
-            "Resource": "arn:aws:s3:::<bucket>"
+            "Resource": "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an"
         },
         {
             "Sid": "AllowGetObjectAndVersions",
@@ -23,7 +23,7 @@
                 "s3:GetObject",
                 "s3:GetObjectVersion"
             ],
-            "Resource": "arn:aws:s3:::<bucket>/*"
+            "Resource": "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an/*"
         }
     ]
 }

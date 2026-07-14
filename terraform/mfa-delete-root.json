@@ -9,7 +9,7 @@
                 "s3:DeleteObject",
                 "s3:DeleteObjectVersion"
             ],
-            "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+            "Resource": "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an/*.tfstate",
             "Condition": {
                 "StringNotLike": {
                     "aws:PrincipalArn": "arn:aws:iam::160885265516:root"
@@ -26,7 +26,7 @@
                 "s3:DeleteObject",
                 "s3:DeleteObjectVersion"
             ],
-            "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+            "Resource": "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an/*.tfstate",
             "Condition": {
                 "BoolIfExists": {
                     "aws:MultiFactorAuthPresent": "false"
@@ -39,8 +39,8 @@
             "Principal": "*",
             "Action": "s3:*",
             "Resource": [
-                "arn:aws:s3:::joindevops-160885265516-us-east-1-an",
-                "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*"
+                "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an",
+                "arn:aws:s3:::joindevops-remote-state-160885265516-us-east-1-an/*"
             ],
             "Condition": {
                 "Bool": {
