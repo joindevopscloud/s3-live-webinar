@@ -8,7 +8,7 @@ terraform {
 
   # remote state storage location
   backend "s3" {
-    bucket         = "joindvops-state-160885265516-us-east-1-an"
+    bucket         = "<bucket>"
     key            = "s3-demo.tfstate"
     region         = "us-east-1"
     encrypt        = true
