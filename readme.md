@@ -350,6 +350,54 @@ aws s3 presign s3://my-bucket/private-report.pdf --expires-in 3600
  
 Uses: temporary download links, time-boxed upload access (presigned PUT), sharing artifacts/logs with someone outside the account without onboarding them to IAM. The object stays private throughout; you never touch BPA.
 
+## S3 Bucket Security: Encryption & Access Control
+
+### Encryption at Rest
+- **Status:** Enabled by default (SSE-S3) since January 2023 for all new objects — no configuration required.
+- **Verify:** S3 Console → Bucket → **Properties** tab → **Default encryption** (shows `SSE-S3` or `SSE-KMS`).
+- **CLI check:**
+```bash
+  aws s3api get-bucket-encryption --bucket joindvops-160885265516-us-east-1-an
+```
+
+### Encryption in Transit
+- **Status:** NOT enforced by default — S3 accepts both `http://` and `https://` requests unless explicitly denied.
+- **Enforce HTTPS-only** via bucket policy using the `aws:SecureTransport` condition:
+
+```json
+{
+    "Sid": "DenyInsecureTransport",
+    "Effect": "Deny",
+    "Principal": "*",
+    "Action": "s3:*",
+    "Resource": [
+        "arn:aws:s3:::joindvops-160885265516-us-east-1-an",
+        "arn:aws:s3:::joindvops-160885265516-us-east-1-an/*"
+    ],
+    "Condition": {
+        "Bool": {
+            "aws:SecureTransport": "false"
+        }
+    }
+}
+```
+
+**Notes:**
+- Applies to **all principals** (`*`), including root/admins — intentional, since transit encryption should be a hard requirement.
+- `s3:*` blocks all actions (GetObject, PutObject, ListBucket, etc.) over HTTP.
+
+---
+
+### Verification Commands
+
+```bash
+# Confirm bucket policy is live
+aws s3api get-bucket-policy --bucket joindvops-160885265516-us-east-1-an --output text
+
+# Confirm default encryption
+aws s3api get-bucket-encryption --bucket joindvops-160885265516-us-east-1-an
+```
+
 ### MFA Delete
 Requires a physical second factor before:
 - Permanently deleting any object **version**
