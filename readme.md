@@ -431,29 +431,111 @@ expected output
 }
 ```
 
-Edit S3 bucket policy it should have
+During the live session we hit a problem while deleting an object as root with MFA. After investigating, here is the summary.
+
+There are **two independent ways** to require MFA before a version can be deleted. **Do not combine them** — S3 MFA Delete (the versioning feature) and a bucket policy that checks `aws:MultiFactorAuthPresent` conflict, and that conflict is what caused the failure in the session. Pick one approach, not both.
+
+#### Approach 1 — Use S3 MFA Delete (versioning feature)
+
+Here the MFA requirement is enforced by the versioning configuration itself (`MFADelete=Enabled`), so the **bucket policy must NOT contain any MFA condition**. The policy can still restrict deletes to the root user only:
+
 ```json
 {
     "Version": "2012-10-17",
-    "Id": "MFADeletePolicy",
     "Statement": [
         {
-            "Sid": "DenyDeleteExceptRootUser",
+            "Sid": "DenyDeleteForNonRoot",
             "Effect": "Deny",
-            "NotPrincipal": {
-                "AWS": "<root_user_arn>"
-            },
+            "Principal": "*",
             "Action": [
                 "s3:DeleteObject",
                 "s3:DeleteObjectVersion"
             ],
-            "Resource": "arn:aws:s3:::<bucket-name>/*"
+            "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+            "Condition": {
+                "ArnNotLike": {
+                    "aws:PrincipalArn": "arn:aws:iam::160885265516:root"
+                }
+            }
+        },
+        {
+            "Sid": "DenyInsecureTransport",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::joindevops-160885265516-us-east-1-an",
+                "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "false"
+                }
+            }
         }
     ]
 }
 ```
+#### Approach 2 — Enforce MFA through the bucket policy
 
-Now How to delete? only root can delete
+Here S3 MFA Delete stays **disabled** on the versioning configuration, and the MFA requirement is enforced entirely by the bucket policy. Again, the two mechanisms must never be enabled at the same time. Edit the S3 bucket policy so it contains:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyDeleteForNonRoot",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+      "Condition": {
+        "ArnNotLike": {
+          "aws:PrincipalArn": "arn:aws:iam::160885265516:root"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRootDeleteWithoutMFA",
+      "Effect": "Deny",
+      "Principal": {
+        "AWS": "arn:aws:iam::160885265516:root"
+      },
+      "Action": [
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*",
+      "Condition": {
+        "BoolIfExists": {
+          "aws:MultiFactorAuthPresent": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::joindevops-160885265516-us-east-1-an",
+        "arn:aws:s3:::joindevops-160885265516-us-east-1-an/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    }
+  ]
+}
+```
+
+#### How to delete (only root can delete) — Approach 1
 
 ```bash
 aws s3api delete-object \
